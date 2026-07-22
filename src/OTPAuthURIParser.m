@@ -3,11 +3,7 @@
 @implementation OTPAuthURIParser
 
 + (NSString *)decodeURLString:(NSString *)string {
-    if ([string respondsToSelector:@selector(stringByRemovingPercentEncoding)]) {
-        return [string stringByRemovingPercentEncoding];
-    } else {
-        return [string stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
-    }
+    return [string stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
 }
 
 + (OTPAccount *)accountFromURI:(NSString *)uriString {
@@ -19,7 +15,7 @@
     NSString *accountName = [self decodeURLString:path];
     NSString *issuer = @"";
     
-    if ([accountName containsString:@":"]) {
+    if ([accountName rangeOfString:@":"].location != NSNotFound) {
         NSArray *comps = [accountName componentsSeparatedByString:@":"];
         if (comps.count >= 2) {
             issuer = [comps[0] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
