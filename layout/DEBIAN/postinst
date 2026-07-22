@@ -1,0 +1,5 @@
+#!/bin/sh
+if [ "$1" = "configure" ]; then
+    su mobile -c uicache
+fi
+exit 0

@@ -1,0 +1,5 @@
+#!/bin/sh
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+    su mobile -c uicache
+fi
+exit 0
