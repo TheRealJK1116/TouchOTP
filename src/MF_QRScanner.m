@@ -52,18 +52,22 @@
         return nil;
     }
     
-    struct quirc_code code;
-    struct quirc_data data;
-    quirc_extract(q, 0, &code);
-    quirc_decode_error_t err = quirc_decode(&code, &data);
+    NSString *result = nil;
+    for (int i = 0; i < count; i++) {
+        struct quirc_code code;
+        struct quirc_data data;
+        quirc_extract(q, i, &code);
+        quirc_decode_error_t err = quirc_decode(&code, &data);
+        
+        if (!err) {
+            result = [[NSString alloc] initWithBytes:data.payload length:data.payload_len encoding:NSUTF8StringEncoding];
+            break;
+        }
+    }
     
     quirc_destroy(q);
     
-    if (err) {
-        return nil;
-    }
-    
-    return [[NSString alloc] initWithBytes:data.payload length:data.payload_len encoding:NSUTF8StringEncoding];
+    return result;
 }
 
 @end

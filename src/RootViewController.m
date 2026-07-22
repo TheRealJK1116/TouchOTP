@@ -200,6 +200,7 @@
                 UIImagePickerController *picker = [[UIImagePickerController alloc] init];
                 picker.sourceType = UIImagePickerControllerSourceTypeCamera;
                 picker.delegate = self;
+                picker.allowsEditing = YES; // Allows cropping the QR code to help quirc detect it on fixed-focus cameras
                 [self presentViewController:picker animated:YES completion:nil];
             } else {
                 UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"No Camera" message:@"Camera is not available on this device." delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
@@ -413,7 +414,11 @@
 - (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info {
     [picker dismissViewControllerAnimated:YES completion:nil];
     
-    UIImage *image = info[UIImagePickerControllerOriginalImage];
+    UIImage *image = info[UIImagePickerControllerEditedImage];
+    if (!image) {
+        image = info[UIImagePickerControllerOriginalImage];
+    }
+    
     if (image) {
         NSString *qrString = [MF_QRScanner decodeQRImage:image];
         if (qrString) {
