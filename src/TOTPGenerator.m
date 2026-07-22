@@ -17,7 +17,7 @@
     NSMutableData *hash = [NSMutableData dataWithLength:CC_SHA1_DIGEST_LENGTH];
     CCHmac(kCCHmacAlgSHA1, secretData.bytes, secretData.length, &counter, sizeof(counter), hash.mutableBytes);
     
-    const char *ptr = hash.bytes;
+    const unsigned char *ptr = hash.bytes;
     int offset = ptr[CC_SHA1_DIGEST_LENGTH - 1] & 0x0f;
     
     uint32_t truncatedHash = 

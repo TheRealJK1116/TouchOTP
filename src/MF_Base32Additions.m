@@ -13,7 +13,7 @@
     }
     
     NSMutableData *data = [NSMutableData dataWithCapacity:length];
-    uint8_t buffer = 0;
+    uint32_t buffer = 0;
     NSUInteger bitsLeft = 0;
     
     for (NSUInteger i = 0; i < length; i++) {
