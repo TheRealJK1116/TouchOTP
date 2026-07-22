@@ -4,8 +4,15 @@
 
 @implementation MF_QRScanner
 
-+ (NSString *)decodeQRImage:(UIImage *)image {
-    if (!image) return nil;
++ (NSString *)decodeQRImage:(UIImage *)rawImage {
+    if (!rawImage) return nil;
+    
+    // Normalize image orientation and crop by drawing it into a new context
+    CGSize size = rawImage.size;
+    UIGraphicsBeginImageContextWithOptions(size, NO, 1.0);
+    [rawImage drawInRect:CGRectMake(0, 0, size.width, size.height)];
+    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
     
     CGImageRef cgImage = image.CGImage;
     if (!cgImage) return nil;
