@@ -30,13 +30,13 @@
 @implementation ZXModulusGF
 
 + (ZXModulusGF *)PDF417_GF {
-  static dispatch_once_t pred = 0;
+   
   __strong static id _mod = nil;
-  dispatch_once(&pred, ^{
+  if (!_mod) {
     @autoreleasepool {
       _mod = [[ZXModulusGF alloc] initWithModulus:ZX_PDF417_NUMBER_OF_CODEWORDS generator:3];
     }
-  });
+  }
   return _mod;
 }
 
