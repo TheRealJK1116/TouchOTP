@@ -7,7 +7,7 @@ include $(THEOS)/makefiles/common.mk
 APPLICATION_NAME = TouchOTP
 TouchOTP_FILES = main.m $(wildcard src/*.m) $(wildcard src/aes-gcm/*.c) $(wildcard src/ZXingObjC/**/*.m) $(wildcard src/ZXingObjC/**/**/*.m) $(wildcard src/ZXingObjC/**/**/**/*.m)
 TouchOTP_FRAMEWORKS = UIKit CoreGraphics Foundation Security CoreVideo AVFoundation CoreMedia ImageIO CoreImage
-TouchOTP_CFLAGS = -fobjc-arc -I./src -I./src/aes-gcm -I./src/ZXingObjC
+TouchOTP_CFLAGS = -fobjc-arc -I./src -I./src/aes-gcm -I./src/ZXingObjC -I./src/ZXingObjC/core -I./src/ZXingObjC/aztec -I./src/ZXingObjC/qrcode -I./src/ZXingObjC/common
 
 include $(THEOS_MAKE_PATH)/application.mk
 
