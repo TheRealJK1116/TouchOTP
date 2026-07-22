@@ -12,5 +12,4 @@ TouchOTP_CFLAGS = -fobjc-arc -I./src
 include $(THEOS_MAKE_PATH)/application.mk
 
 after-install::
-	install.exec "uicache"
-	install.exec "uiopen 'touchotp://'"
+	install.exec "su mobile -c uicache"
