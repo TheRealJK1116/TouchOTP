@@ -1,0 +1,9 @@
+Package: com.therealjk1116.touchotp
+Name: TouchOTP
+Depends: 
+Version: 0.1.0
+Architecture: iphoneos-arm
+Description: A modern OTP application for iOS 6
+Maintainer: TheRealJK1116
+Author: TheRealJK1116
+Section: Applications
