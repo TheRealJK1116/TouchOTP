@@ -61,52 +61,52 @@
   return self;
 }
 
+static ZXGenericGF *global_AztecData12 = nil;
 + (ZXGenericGF *)AztecData12 {
-  static ZXGenericGF *AztecData12 = nil;
-  if (!AztecData12) {
-    AztecData12 = [[ZXGenericGF alloc] initWithPrimitive:0x1069 size:4096 b:1]; // x^12 + x^6 + x^5 + x^3 + 1
+  if (!global_AztecData12) {
+    global_AztecData12 = [[ZXGenericGF alloc] initWithPrimitive:0x1069 size:4096 b:1]; // x^12 + x^6 + x^5 + x^3 + 1
   }
-  return AztecData12;
+  return global_AztecData12;
 }
 
+static ZXGenericGF *global_AztecData10 = nil;
 + (ZXGenericGF *)AztecData10 {
-  static ZXGenericGF *AztecData10 = nil;
-  if (!AztecData10) {
-    AztecData10 = [[ZXGenericGF alloc] initWithPrimitive:0x409 size:1024 b:1]; // x^10 + x^3 + 1
+  if (!global_AztecData10) {
+    global_AztecData10 = [[ZXGenericGF alloc] initWithPrimitive:0x409 size:1024 b:1]; // x^10 + x^3 + 1
   }
-  return AztecData10;
+  return global_AztecData10;
 }
 
+static ZXGenericGF *global_AztecData6 = nil;
 + (ZXGenericGF *)AztecData6 {
-  static ZXGenericGF *AztecData6 = nil;
-  if (!AztecData6) {
-    AztecData6 = [[ZXGenericGF alloc] initWithPrimitive:0x43 size:64 b:1]; // x^6 + x + 1
+  if (!global_AztecData6) {
+    global_AztecData6 = [[ZXGenericGF alloc] initWithPrimitive:0x43 size:64 b:1]; // x^6 + x + 1
   }
-  return AztecData6;
+  return global_AztecData6;
 }
 
+static ZXGenericGF *global_AztecParam = nil;
 + (ZXGenericGF *)AztecParam {
-  static ZXGenericGF *AztecParam = nil;
-  if (!AztecParam) {
-    AztecParam = [[ZXGenericGF alloc] initWithPrimitive:0x13 size:16 b:1]; // x^4 + x + 1
+  if (!global_AztecParam) {
+    global_AztecParam = [[ZXGenericGF alloc] initWithPrimitive:0x13 size:16 b:1]; // x^4 + x + 1
   }
-  return AztecParam;
+  return global_AztecParam;
 }
 
+static ZXGenericGF *global_QrCodeField256 = nil;
 + (ZXGenericGF *)QrCodeField256 {
-  static ZXGenericGF *QrCodeField256 = nil;
-  if (!QrCodeField256) {
-    QrCodeField256 = [[ZXGenericGF alloc] initWithPrimitive:0x011D size:256 b:0]; // x^8 + x^4 + x^3 + x^2 + 1
+  if (!global_QrCodeField256) {
+    global_QrCodeField256 = [[ZXGenericGF alloc] initWithPrimitive:0x011D size:256 b:0]; // x^8 + x^4 + x^3 + x^2 + 1
   }
-  return QrCodeField256;
+  return global_QrCodeField256;
 }
 
+static ZXGenericGF *global_DataMatrixField256 = nil;
 + (ZXGenericGF *)DataMatrixField256 {
-  static ZXGenericGF *DataMatrixField256 = nil;
-  if (!DataMatrixField256) {
-    DataMatrixField256 = [[ZXGenericGF alloc] initWithPrimitive:0x012D size:256 b:1]; // x^8 + x^5 + x^3 + x^2 + 1
+  if (!global_DataMatrixField256) {
+    global_DataMatrixField256 = [[ZXGenericGF alloc] initWithPrimitive:0x012D size:256 b:1]; // x^8 + x^5 + x^3 + x^2 + 1
   }
-  return DataMatrixField256;
+  return global_DataMatrixField256;
 }
 
 + (ZXGenericGF *)AztecData8 {

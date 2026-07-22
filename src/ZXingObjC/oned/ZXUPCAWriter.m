@@ -19,13 +19,14 @@
 
 @implementation ZXUPCAWriter
 
+static ZXEAN13Writer *global_subWriter = nil;
+
 - (ZXEAN13Writer *)subWriter {
-  static ZXEAN13Writer *subWriter = nil;
-  if (!subWriter) {
-    subWriter = [[ZXEAN13Writer alloc] init];
+  if (!global_subWriter) {
+    global_subWriter = [[ZXEAN13Writer alloc] init];
   }
 
-  return subWriter;
+  return global_subWriter;
 }
 
 - (ZXBitMatrix *)encode:(NSString *)contents format:(ZXBarcodeFormat)format width:(int)width height:(int)height error:(NSError **)error {
