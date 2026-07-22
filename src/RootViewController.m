@@ -5,10 +5,14 @@
 #import "TwoFASImporter.h"
 #import "FileBrowserViewController.h"
 
-@interface RootViewController () <AddAccountDelegate, AccountDetailDelegate, UIActionSheetDelegate, UIAlertViewDelegate, FileBrowserDelegate>
+@interface RootViewController () <AddAccountDelegate, AccountDetailDelegate, UIActionSheetDelegate, UIAlertViewDelegate, FileBrowserDelegate, UISearchBarDelegate>
 @property (nonatomic, strong) NSTimer *timer;
 @property (nonatomic, strong) UILabel *titleViewLabel;
 @property (nonatomic, strong) NSData *pendingImportData;
+@property (nonatomic, strong) UISearchBar *searchBar;
+@property (nonatomic, strong) NSArray *displayedAccounts;
+@property (nonatomic, assign) BOOL isSearching;
+@property (nonatomic, copy) NSString *currentSearchText;
 @end
 
 @implementation RootViewController
@@ -16,12 +20,20 @@
 - (void)loadView {
     [super loadView];
     
-    self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStylePlain];
+    CGRect bounds = self.view.bounds;
+    
+    self.tableView = [[UITableView alloc] initWithFrame:CGRectMake(0, 0, bounds.size.width, bounds.size.height - 44) style:UITableViewStylePlain];
     self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.tableView.delegate = self;
     self.tableView.dataSource = self;
     self.tableView.rowHeight = 85.0;
     [self.view addSubview:self.tableView];
+    
+    self.searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, bounds.size.height - 44, bounds.size.width, 44)];
+    self.searchBar.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
+    self.searchBar.delegate = self;
+    self.searchBar.placeholder = @"Search Accounts";
+    [self.view addSubview:self.searchBar];
 }
 
 - (void)viewDidLoad {
@@ -49,9 +61,36 @@
     [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
+- (void)refreshData {
+    NSArray *all = [[OTPStore sharedStore] accounts];
+    NSArray *sorted = [all sortedArrayUsingComparator:^NSComparisonResult(OTPAccount *a1, OTPAccount *a2) {
+        NSString *s1 = a1.issuer.length > 0 ? a1.issuer : @"";
+        NSString *s2 = a2.issuer.length > 0 ? a2.issuer : @"";
+        NSComparisonResult res = [s1 caseInsensitiveCompare:s2];
+        if (res == NSOrderedSame) {
+            NSString *n1 = a1.name.length > 0 ? a1.name : @"";
+            NSString *n2 = a2.name.length > 0 ? a2.name : @"";
+            return [n1 caseInsensitiveCompare:n2];
+        }
+        return res;
+    }];
+    
+    if (self.isSearching && self.currentSearchText.length > 0) {
+        NSPredicate *pred = [NSPredicate predicateWithBlock:^BOOL(OTPAccount *acc, NSDictionary *bindings) {
+            BOOL matchIssuer = [acc.issuer rangeOfString:self.currentSearchText options:NSCaseInsensitiveSearch].location != NSNotFound;
+            BOOL matchName = [acc.name rangeOfString:self.currentSearchText options:NSCaseInsensitiveSearch].location != NSNotFound;
+            return matchIssuer || matchName;
+        }];
+        self.displayedAccounts = [sorted filteredArrayUsingPredicate:pred];
+    } else {
+        self.displayedAccounts = sorted;
+    }
+    [self.tableView reloadData];
+}
+
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
-    [self.tableView reloadData];
+    [self refreshData];
     self.timer = [NSTimer scheduledTimerWithTimeInterval:0.5 target:self selector:@selector(tick) userInfo:nil repeats:YES];
 }
 
@@ -65,24 +104,26 @@
     [self updateTitle];
     for (UITableViewCell *cell in [self.tableView visibleCells]) {
         NSIndexPath *indexPath = [self.tableView indexPathForCell:cell];
-        OTPAccount *account = [[OTPStore sharedStore].accounts objectAtIndex:indexPath.row];
-        NSString *totp = [account formattedTOTP];
-        
-        UILabel *codeLabel = (UILabel *)[cell.contentView viewWithTag:100];
-        UILabel *nextCodeLabel = (UILabel *)[cell.contentView viewWithTag:103];
-        
-        if ([totp isEqualToString:@"Error"]) {
-            codeLabel.text = account.lastError ?: @"Error";
-            codeLabel.font = [UIFont systemFontOfSize:12];
-            codeLabel.textColor = [UIColor redColor];
-            nextCodeLabel.text = @"";
-        } else {
-            codeLabel.text = totp;
-            codeLabel.font = [UIFont fontWithName:@"HelveticaNeue-Bold" size:28];
-            codeLabel.textColor = [UIColor colorWithRed:0.2 green:0.4 blue:0.8 alpha:1.0];
+        if (indexPath && indexPath.row < self.displayedAccounts.count) {
+            OTPAccount *account = [self.displayedAccounts objectAtIndex:indexPath.row];
+            NSString *totp = [account formattedTOTP];
             
-            NSString *nextTotp = [account formattedNextTOTP];
-            nextCodeLabel.text = nextTotp.length > 0 ? [NSString stringWithFormat:@"Next: %@", nextTotp] : @"";
+            UILabel *codeLabel = (UILabel *)[cell.contentView viewWithTag:100];
+            UILabel *nextCodeLabel = (UILabel *)[cell.contentView viewWithTag:103];
+            
+            if ([totp isEqualToString:@"Error"]) {
+                codeLabel.text = account.lastError ?: @"Error";
+                codeLabel.font = [UIFont systemFontOfSize:12];
+                codeLabel.textColor = [UIColor redColor];
+                nextCodeLabel.text = @"";
+            } else {
+                codeLabel.text = totp;
+                codeLabel.font = [UIFont fontWithName:@"HelveticaNeue-Bold" size:28];
+                codeLabel.textColor = [UIColor colorWithRed:0.2 green:0.4 blue:0.8 alpha:1.0];
+                
+                NSString *nextTotp = [account formattedNextTOTP];
+                nextCodeLabel.text = nextTotp.length > 0 ? [NSString stringWithFormat:@"Next: %@", nextTotp] : @"";
+            }
         }
     }
 }
@@ -186,7 +227,7 @@
         }
     }
     
-    [self.tableView reloadData];
+    [self refreshData];
     NSString *msg = [NSString stringWithFormat:@"Successfully imported %d accounts.\nSkipped %d duplicates.", imported, skipped];
     UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Import Complete" message:msg delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
     [alert show];
@@ -208,17 +249,17 @@
 
 - (void)didAddAccount:(OTPAccount *)account {
     [[OTPStore sharedStore] addAccount:account];
-    [self.tableView reloadData];
+    [self refreshData];
 }
 
 - (void)accountDetailDidUpdateOrDelete {
-    [self.tableView reloadData];
+    [self refreshData];
 }
 
 #pragma mark - UITableViewDataSource
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return [OTPStore sharedStore].accounts.count;
+    return self.displayedAccounts.count;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -259,7 +300,7 @@
         [cell.contentView addSubview:nextCodeLabel];
     }
     
-    OTPAccount *account = [[OTPStore sharedStore].accounts objectAtIndex:indexPath.row];
+    OTPAccount *account = [self.displayedAccounts objectAtIndex:indexPath.row];
     
     UILabel *issuerLabel = (UILabel *)[cell.contentView viewWithTag:101];
     UILabel *nameLabel = (UILabel *)[cell.contentView viewWithTag:102];
@@ -289,8 +330,11 @@
 
 - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
     if (editingStyle == UITableViewCellEditingStyleDelete) {
-        OTPAccount *account = [[OTPStore sharedStore].accounts objectAtIndex:indexPath.row];
+        OTPAccount *account = [self.displayedAccounts objectAtIndex:indexPath.row];
         [[OTPStore sharedStore] removeAccount:account];
+        NSMutableArray *mut = [self.displayedAccounts mutableCopy];
+        [mut removeObjectAtIndex:indexPath.row];
+        self.displayedAccounts = mut;
         [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
     }
 }
@@ -300,7 +344,7 @@
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     
-    OTPAccount *account = [[OTPStore sharedStore].accounts objectAtIndex:indexPath.row];
+    OTPAccount *account = [self.displayedAccounts objectAtIndex:indexPath.row];
     NSString *totp = [account currentTOTP];
     if (totp) {
         UIPasteboard *pb = [UIPasteboard generalPasteboard];
@@ -316,11 +360,27 @@
 }
 
 - (void)tableView:(UITableView *)tableView accessoryButtonTappedForRowWithIndexPath:(NSIndexPath *)indexPath {
-    OTPAccount *account = [[OTPStore sharedStore].accounts objectAtIndex:indexPath.row];
+    OTPAccount *account = [self.displayedAccounts objectAtIndex:indexPath.row];
     AccountDetailViewController *detailVC = [[AccountDetailViewController alloc] init];
     detailVC.account = account;
     detailVC.delegate = self;
     [self.navigationController pushViewController:detailVC animated:YES];
+}
+
+#pragma mark - UISearchBarDelegate
+
+- (void)searchBar:(UISearchBar *)searchBar textDidChange:(NSString *)searchText {
+    self.currentSearchText = searchText;
+    self.isSearching = (searchText.length > 0);
+    [self refreshData];
+}
+
+- (void)searchBarSearchButtonClicked:(UISearchBar *)searchBar {
+    [searchBar resignFirstResponder];
+}
+
+- (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView {
+    [self.searchBar resignFirstResponder];
 }
 
 @end
