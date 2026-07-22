@@ -3,10 +3,12 @@
 #import "AddAccountViewController.h"
 #import "AccountDetailViewController.h"
 #import "TwoFASImporter.h"
+#import "FileBrowserViewController.h"
 
-@interface RootViewController () <AddAccountDelegate, AccountDetailDelegate, UIActionSheetDelegate>
+@interface RootViewController () <AddAccountDelegate, AccountDetailDelegate, UIActionSheetDelegate, UIAlertViewDelegate, FileBrowserDelegate>
 @property (nonatomic, strong) NSTimer *timer;
 @property (nonatomic, strong) UILabel *titleViewLabel;
+@property (nonatomic, strong) NSData *pendingImportData;
 @end
 
 @implementation RootViewController
@@ -85,7 +87,7 @@
 }
 
 - (void)addButtonTapped:(id)sender {
-    UIActionSheet *sheet = [[UIActionSheet alloc] initWithTitle:@"Add Account" delegate:self cancelButtonTitle:@"Cancel" destructiveButtonTitle:nil otherButtonTitles:@"Add Manually", @"Import from Clipboard", nil];
+    UIActionSheet *sheet = [[UIActionSheet alloc] initWithTitle:@"Add Account" delegate:self cancelButtonTitle:@"Cancel" destructiveButtonTitle:nil otherButtonTitles:@"Add Manually", @"Import from Clipboard", @"Import from File", nil];
     sheet.tag = 1;
     [sheet showInView:self.view];
 }
@@ -101,28 +103,53 @@
             NSString *clip = [UIPasteboard generalPasteboard].string;
             if (clip.length > 0) {
                 NSData *data = [clip dataUsingEncoding:NSUTF8StringEncoding];
-                [self processImportData:data];
+                [self processImportData:data password:nil];
             } else {
                 UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Error" message:@"Clipboard is empty." delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
                 [alert show];
             }
+        } else if (buttonIndex == 2) {
+            FileBrowserViewController *browser = [[FileBrowserViewController alloc] init];
+            browser.delegate = self;
+            UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:browser];
+            [self presentViewController:nav animated:YES completion:nil];
         }
     }
+}
+
+- (void)fileBrowserDidSelectData:(NSData *)data fileName:(NSString *)fileName {
+    [self processImportData:data password:nil];
 }
 
 - (void)handleImportFile:(NSNotification *)note {
     NSData *data = note.object;
     if ([data isKindOfClass:[NSData class]]) {
-        [self processImportData:data];
+        [self processImportData:data password:nil];
     }
 }
 
-- (void)processImportData:(NSData *)data {
+- (void)processImportData:(NSData *)data password:(NSString *)password {
     TwoFASImporter *importer = [[TwoFASImporter alloc] init];
     NSError *error = nil;
-    NSArray *accounts = [importer importAccountsFromData:data error:&error];
+    NSArray *accounts = [importer importAccountsFromData:data password:password error:&error];
     
     if (error) {
+        if (error.code == 999) {
+            self.pendingImportData = data;
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Encrypted Backup" message:@"Enter the backup password:" delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"Decrypt", nil];
+            alert.alertViewStyle = UIAlertViewStyleSecureTextInput;
+            alert.tag = 2;
+            [alert show];
+            return;
+        } else if (error.code == 6) {
+            self.pendingImportData = data;
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Decryption Failed" message:@"Incorrect password. Try again:" delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"Decrypt", nil];
+            alert.alertViewStyle = UIAlertViewStyleSecureTextInput;
+            alert.tag = 2;
+            [alert show];
+            return;
+        }
+        
         UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Import Failed" message:error.localizedDescription delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
         [alert show];
         return;
@@ -133,6 +160,8 @@
         [alert show];
         return;
     }
+    
+    self.pendingImportData = nil;
     
     int imported = 0;
     int skipped = 0;
@@ -149,6 +178,20 @@
     NSString *msg = [NSString stringWithFormat:@"Successfully imported %d accounts.\nSkipped %d duplicates.", imported, skipped];
     UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Import Complete" message:msg delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
     [alert show];
+}
+
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
+    if (alertView.tag == 2) {
+        if (buttonIndex == 1) {
+            NSString *pass = [alertView textFieldAtIndex:0].text;
+            NSData *data = self.pendingImportData;
+            if (data) {
+                [self processImportData:data password:pass];
+            }
+        } else {
+            self.pendingImportData = nil;
+        }
+    }
 }
 
 - (void)didAddAccount:(OTPAccount *)account {

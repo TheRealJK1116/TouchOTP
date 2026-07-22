@@ -1,10 +1,11 @@
 #import "TwoFASImporter.h"
 #import "OTPAccount.h"
 #import "MF_Base32Additions.h"
+#import "MF_2FASDecryptor.h"
 
 @implementation TwoFASImporter
 
-- (NSArray *)importAccountsFromData:(NSData *)data error:(NSError **)error {
+- (NSArray *)importAccountsFromData:(NSData *)data password:(NSString *)password error:(NSError **)error {
     if (!data || data.length == 0) {
         if (error) *error = [NSError errorWithDomain:@"TwoFASImporter" code:1 userInfo:@{NSLocalizedDescriptionKey: @"Empty file data."}];
         return nil;
@@ -19,12 +20,31 @@
     }
     
     // Check if it's an encrypted backup
-    if (root[@"encryptionAlgo"] && !root[@"services"]) {
-        if (error) *error = [NSError errorWithDomain:@"TwoFASImporter" code:3 userInfo:@{NSLocalizedDescriptionKey: @"Encrypted 2FAS backups are not currently supported. Please export an unencrypted backup."}];
-        return nil;
+    NSArray *services = root[@"services"];
+    if (root[@"encryptionAlgo"] && !services) {
+        NSString *servicesEncrypted = root[@"servicesEncrypted"];
+        if (servicesEncrypted) {
+            if (!password || password.length == 0) {
+                if (error) *error = [NSError errorWithDomain:@"TwoFASImporter" code:999 userInfo:@{NSLocalizedDescriptionKey: @"Password required."}];
+                return nil;
+            }
+            
+            NSData *decryptedData = [MF_2FASDecryptor decryptServicesEncrypted:servicesEncrypted password:password error:error];
+            if (!decryptedData) return nil;
+            
+            NSError *innerJsonError = nil;
+            NSArray *decryptedServices = [NSJSONSerialization JSONObjectWithData:decryptedData options:0 error:&innerJsonError];
+            if (innerJsonError || ![decryptedServices isKindOfClass:[NSArray class]]) {
+                if (error) *error = [NSError errorWithDomain:@"TwoFASImporter" code:6 userInfo:@{NSLocalizedDescriptionKey: @"Decrypted payload is not valid JSON. Incorrect password?"}];
+                return nil;
+            }
+            services = decryptedServices;
+        } else {
+            if (error) *error = [NSError errorWithDomain:@"TwoFASImporter" code:3 userInfo:@{NSLocalizedDescriptionKey: @"Encrypted backup missing servicesEncrypted payload."}];
+            return nil;
+        }
     }
     
-    NSArray *services = root[@"services"];
     if (!services || ![services isKindOfClass:[NSArray class]]) {
         if (error) *error = [NSError errorWithDomain:@"TwoFASImporter" code:4 userInfo:@{NSLocalizedDescriptionKey: @"No accounts found in backup."}];
         return nil;
