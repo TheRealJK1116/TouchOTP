@@ -323,16 +323,16 @@
         nameLabel.backgroundColor = [UIColor clearColor];
         [cell.contentView addSubview:nameLabel];
         
-        UILabel *codeLabel = [[UILabel alloc] initWithFrame:CGRectMake(15, 45, 150, 32)];
+        UILabel *codeLabel = [[UILabel alloc] initWithFrame:CGRectMake(15, 45, 145, 32)];
         codeLabel.tag = 100;
         codeLabel.font = [UIFont fontWithName:@"HelveticaNeue-Bold" size:28];
         codeLabel.textColor = [UIColor colorWithRed:0.2 green:0.4 blue:0.8 alpha:1.0];
         codeLabel.backgroundColor = [UIColor clearColor];
         [cell.contentView addSubview:codeLabel];
         
-        UILabel *nextCodeLabel = [[UILabel alloc] initWithFrame:CGRectMake(self.view.bounds.size.width - 130, 52, 100, 20)];
+        UILabel *nextCodeLabel = [[UILabel alloc] initWithFrame:CGRectMake(self.view.bounds.size.width - 165, 52, 145, 20)];
         nextCodeLabel.tag = 103;
-        nextCodeLabel.font = [UIFont systemFontOfSize:12];
+        nextCodeLabel.font = [UIFont systemFontOfSize:11];
         nextCodeLabel.textColor = [UIColor lightGrayColor];
         nextCodeLabel.textAlignment = NSTextAlignmentRight;
         nextCodeLabel.backgroundColor = [UIColor clearColor];
