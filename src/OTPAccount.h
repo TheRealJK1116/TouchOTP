@@ -10,9 +10,11 @@
 
 // Caching to minimize keychain hits and CPU usage
 @property (nonatomic, copy) NSString *cachedTOTP;
+@property (nonatomic, copy) NSString *cachedNextTOTP;
 @property (nonatomic, assign) NSTimeInterval cachedTOTPExpiration;
 @property (nonatomic, copy) NSString *lastError;
 
 - (NSString *)currentTOTP;
 - (NSString *)formattedTOTP;
+- (NSString *)formattedNextTOTP;
 @end

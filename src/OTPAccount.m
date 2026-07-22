@@ -54,8 +54,10 @@
         
         if (secretToUse) {
             self.cachedTOTP = [TOTPGenerator generateTOTPWithSecretString:secretToUse period:self.period digits:self.digits timestamp:now error:&err];
+            self.cachedNextTOTP = [TOTPGenerator generateTOTPWithSecretString:secretToUse period:self.period digits:self.digits timestamp:now + period error:nil];
             if (!self.cachedTOTP) {
                 self.cachedTOTP = @"Error";
+                self.cachedNextTOTP = @"";
                 self.lastError = err ? err.localizedDescription : @"Gen Fail";
             } else {
                 self.lastError = nil;
@@ -63,11 +65,25 @@
             self.cachedTOTPExpiration = expiration;
         } else {
             self.cachedTOTP = @"Error";
+            self.cachedNextTOTP = @"";
             self.lastError = err ? [NSString stringWithFormat:@"KC %d", (int)err.code] : @"No Secret";
             self.cachedTOTPExpiration = expiration;
         }
     }
     return self.cachedTOTP;
+}
+
+- (NSString *)formattedNextTOTP {
+    [self currentTOTP]; // Ensure caches are updated
+    NSString *raw = self.cachedNextTOTP;
+    if (!raw || raw.length == 0 || [raw isEqualToString:@"Error"]) return @"";
+    
+    if (raw.length == 6) {
+        return [NSString stringWithFormat:@"%@ %@", [raw substringToIndex:3], [raw substringFromIndex:3]];
+    } else if (raw.length == 8) {
+        return [NSString stringWithFormat:@"%@ %@", [raw substringToIndex:4], [raw substringFromIndex:4]];
+    }
+    return raw;
 }
 
 - (NSString *)formattedTOTP {

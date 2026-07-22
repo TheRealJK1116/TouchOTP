@@ -20,7 +20,7 @@
     self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.tableView.delegate = self;
     self.tableView.dataSource = self;
-    self.tableView.rowHeight = 65.0;
+    self.tableView.rowHeight = 85.0;
     [self.view addSubview:self.tableView];
 }
 
@@ -69,15 +69,20 @@
         NSString *totp = [account formattedTOTP];
         
         UILabel *codeLabel = (UILabel *)[cell.contentView viewWithTag:100];
+        UILabel *nextCodeLabel = (UILabel *)[cell.contentView viewWithTag:103];
         
         if ([totp isEqualToString:@"Error"]) {
             codeLabel.text = account.lastError ?: @"Error";
             codeLabel.font = [UIFont systemFontOfSize:12];
             codeLabel.textColor = [UIColor redColor];
+            nextCodeLabel.text = @"";
         } else {
             codeLabel.text = totp;
-            codeLabel.font = [UIFont fontWithName:@"HelveticaNeue-Bold" size:26];
+            codeLabel.font = [UIFont fontWithName:@"HelveticaNeue-Bold" size:28];
             codeLabel.textColor = [UIColor colorWithRed:0.2 green:0.4 blue:0.8 alpha:1.0];
+            
+            NSString *nextTotp = [account formattedNextTOTP];
+            nextCodeLabel.text = nextTotp.length > 0 ? [NSString stringWithFormat:@"Next: %@", nextTotp] : @"";
         }
     }
 }
@@ -220,39 +225,63 @@
     NSString *CellIdentifier = @"OTPCell";
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
     if (cell == nil) {
-        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:CellIdentifier];
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
         cell.accessoryType = UITableViewCellAccessoryDetailDisclosureButton;
         
-        UILabel *codeLabel = [[UILabel alloc] initWithFrame:CGRectMake(self.view.bounds.size.width - 160, 12, 120, 40)];
+        UILabel *issuerLabel = [[UILabel alloc] initWithFrame:CGRectMake(15, 8, 200, 16)];
+        issuerLabel.tag = 101;
+        issuerLabel.font = [UIFont boldSystemFontOfSize:13];
+        issuerLabel.textColor = [UIColor darkGrayColor];
+        issuerLabel.backgroundColor = [UIColor clearColor];
+        [cell.contentView addSubview:issuerLabel];
+        
+        UILabel *nameLabel = [[UILabel alloc] initWithFrame:CGRectMake(15, 26, 200, 16)];
+        nameLabel.tag = 102;
+        nameLabel.font = [UIFont systemFontOfSize:12];
+        nameLabel.textColor = [UIColor grayColor];
+        nameLabel.backgroundColor = [UIColor clearColor];
+        [cell.contentView addSubview:nameLabel];
+        
+        UILabel *codeLabel = [[UILabel alloc] initWithFrame:CGRectMake(15, 45, 150, 32)];
         codeLabel.tag = 100;
-        codeLabel.font = [UIFont fontWithName:@"HelveticaNeue-Bold" size:26];
+        codeLabel.font = [UIFont fontWithName:@"HelveticaNeue-Bold" size:28];
         codeLabel.textColor = [UIColor colorWithRed:0.2 green:0.4 blue:0.8 alpha:1.0];
-        codeLabel.textAlignment = NSTextAlignmentRight;
         codeLabel.backgroundColor = [UIColor clearColor];
-        codeLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
         [cell.contentView addSubview:codeLabel];
+        
+        UILabel *nextCodeLabel = [[UILabel alloc] initWithFrame:CGRectMake(self.view.bounds.size.width - 130, 52, 100, 20)];
+        nextCodeLabel.tag = 103;
+        nextCodeLabel.font = [UIFont systemFontOfSize:12];
+        nextCodeLabel.textColor = [UIColor lightGrayColor];
+        nextCodeLabel.textAlignment = NSTextAlignmentRight;
+        nextCodeLabel.backgroundColor = [UIColor clearColor];
+        nextCodeLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
+        [cell.contentView addSubview:nextCodeLabel];
     }
     
     OTPAccount *account = [[OTPStore sharedStore].accounts objectAtIndex:indexPath.row];
     
-    NSString *title = account.issuer.length > 0 ? account.issuer : @"Unknown";
-    cell.textLabel.text = title;
-    cell.textLabel.font = [UIFont boldSystemFontOfSize:18];
-    
-    cell.detailTextLabel.text = account.name;
-    cell.detailTextLabel.textColor = [UIColor darkGrayColor];
-    
+    UILabel *issuerLabel = (UILabel *)[cell.contentView viewWithTag:101];
+    UILabel *nameLabel = (UILabel *)[cell.contentView viewWithTag:102];
     UILabel *codeLabel = (UILabel *)[cell.contentView viewWithTag:100];
-    NSString *totp = [account formattedTOTP];
+    UILabel *nextCodeLabel = (UILabel *)[cell.contentView viewWithTag:103];
     
+    issuerLabel.text = account.issuer.length > 0 ? account.issuer : @"Unknown Issuer";
+    nameLabel.text = account.name.length > 0 ? account.name : @"";
+    
+    NSString *totp = [account formattedTOTP];
     if ([totp isEqualToString:@"Error"]) {
         codeLabel.text = account.lastError ?: @"Error";
         codeLabel.font = [UIFont systemFontOfSize:12];
         codeLabel.textColor = [UIColor redColor];
+        nextCodeLabel.text = @"";
     } else {
         codeLabel.text = totp;
-        codeLabel.font = [UIFont fontWithName:@"HelveticaNeue-Bold" size:26];
+        codeLabel.font = [UIFont fontWithName:@"HelveticaNeue-Bold" size:28];
         codeLabel.textColor = [UIColor colorWithRed:0.2 green:0.4 blue:0.8 alpha:1.0];
+        
+        NSString *nextTotp = [account formattedNextTOTP];
+        nextCodeLabel.text = nextTotp.length > 0 ? [NSString stringWithFormat:@"Next: %@", nextTotp] : @"";
     }
     
     return cell;
