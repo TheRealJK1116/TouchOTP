@@ -51,7 +51,7 @@
     OTPAccount *account = [[OTPAccount alloc] init];
     account.issuer = self.issuerField.text;
     account.name = self.nameField.text;
-    account.secret = secret;
+    account.transientSecret = secret;
     account.period = 30.0;
     account.digits = 6;
     
