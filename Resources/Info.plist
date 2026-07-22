@@ -32,11 +32,13 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
-	<key>CFBundleIconFile</key>
-	<string></string>
 	<key>CFBundleName</key>
 	<string>TouchOTP</string>
 	<key>CFBundleDisplayName</key>
 	<string>TouchOTP</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
 </dict>
 </plist>
