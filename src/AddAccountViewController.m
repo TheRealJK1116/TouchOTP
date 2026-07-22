@@ -70,7 +70,7 @@
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    static NSString *CellId = @"FormCell";
+    NSString *CellId = @"FormCell";
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellId];
     if (!cell) {
         cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellId];

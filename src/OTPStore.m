@@ -6,12 +6,12 @@
 
 @implementation OTPStore
 
+static OTPStore *shared = nil;
+
 + (instancetype)sharedStore {
-    static OTPStore *shared = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
+    if (!shared) {
         shared = [[self alloc] init];
-    });
+    }
     return shared;
 }
 
