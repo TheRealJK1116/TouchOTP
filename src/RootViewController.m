@@ -4,10 +4,12 @@
 #import "AccountDetailViewController.h"
 #import "TwoFASImporter.h"
 #import "FileBrowserViewController.h"
+#import "NetworkTimeHelper.h"
 
 @interface RootViewController () <AddAccountDelegate, AccountDetailDelegate, UIActionSheetDelegate, UIAlertViewDelegate, FileBrowserDelegate, UISearchBarDelegate>
 @property (nonatomic, strong) NSTimer *timer;
 @property (nonatomic, strong) UILabel *titleViewLabel;
+@property (nonatomic, strong) UILabel *driftLabel;
 @property (nonatomic, strong) NSData *pendingImportData;
 @property (nonatomic, strong) UISearchBar *searchBar;
 @property (nonatomic, strong) NSArray *displayedAccounts;
@@ -27,6 +29,15 @@
     self.tableView.delegate = self;
     self.tableView.dataSource = self;
     self.tableView.rowHeight = 85.0;
+    
+    self.driftLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, bounds.size.width, 30)];
+    self.driftLabel.textAlignment = NSTextAlignmentCenter;
+    self.driftLabel.font = [UIFont systemFontOfSize:12];
+    self.driftLabel.textColor = [UIColor darkGrayColor];
+    self.driftLabel.text = @"Checking network time...";
+    self.driftLabel.backgroundColor = [UIColor clearColor];
+    self.tableView.tableFooterView = self.driftLabel;
+    
     [self.view addSubview:self.tableView];
     
     self.searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, bounds.size.height - 44, bounds.size.width, 44)];
@@ -55,6 +66,8 @@
     self.navigationItem.leftBarButtonItem = self.editButtonItem;
     
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleImportFile:) name:@"TouchOTPImportFileNotification" object:nil];
+    
+    [[NetworkTimeHelper sharedHelper] calculateDrift];
 }
 
 - (void)dealloc {
@@ -102,6 +115,18 @@
 
 - (void)tick {
     [self updateTitle];
+    
+    if ([NetworkTimeHelper sharedHelper].hasCalculatedDrift) {
+        NSTimeInterval drift = [NetworkTimeHelper sharedHelper].drift;
+        if (fabs(drift) > 1.0) {
+            self.driftLabel.text = [NSString stringWithFormat:@"Device clock is %+.0fs relative to network", drift];
+        } else {
+            self.driftLabel.text = @"Device clock is synchronized";
+        }
+    } else if ([NetworkTimeHelper sharedHelper].errorCalculating) {
+        self.driftLabel.text = @"Unable to verify network time";
+    }
+    
     for (UITableViewCell *cell in [self.tableView visibleCells]) {
         NSIndexPath *indexPath = [self.tableView indexPathForCell:cell];
         if (indexPath && indexPath.row < self.displayedAccounts.count) {
@@ -122,16 +147,18 @@
                 codeLabel.textColor = [UIColor colorWithRed:0.2 green:0.4 blue:0.8 alpha:1.0];
                 
                 NSString *nextTotp = [account formattedNextTOTP];
-                nextCodeLabel.text = nextTotp.length > 0 ? [NSString stringWithFormat:@"Next: %@", nextTotp] : @"";
+                
+                long long period = account.period > 0 ? (long long)account.period : 30;
+                int remaining = period - ((long long)[[NSDate date] timeIntervalSince1970] % period);
+                
+                nextCodeLabel.text = nextTotp.length > 0 ? [NSString stringWithFormat:@"Next: %@ (%ds)", nextTotp, remaining] : @"";
             }
         }
     }
 }
 
 - (void)updateTitle {
-    NSTimeInterval now = [[NSDate date] timeIntervalSince1970];
-    int remaining = 30 - ((long long)now % 30);
-    self.titleViewLabel.text = [NSString stringWithFormat:@"TouchOTP (%ds)", remaining];
+    self.titleViewLabel.text = @"TouchOTP";
 }
 
 - (void)setEditing:(BOOL)editing animated:(BOOL)animated {
@@ -322,7 +349,9 @@
         codeLabel.textColor = [UIColor colorWithRed:0.2 green:0.4 blue:0.8 alpha:1.0];
         
         NSString *nextTotp = [account formattedNextTOTP];
-        nextCodeLabel.text = nextTotp.length > 0 ? [NSString stringWithFormat:@"Next: %@", nextTotp] : @"";
+        long long period = account.period > 0 ? (long long)account.period : 30;
+        int remaining = period - ((long long)[[NSDate date] timeIntervalSince1970] % period);
+        nextCodeLabel.text = nextTotp.length > 0 ? [NSString stringWithFormat:@"Next: %@ (%ds)", nextTotp, remaining] : @"";
     }
     
     return cell;

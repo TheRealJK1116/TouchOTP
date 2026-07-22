@@ -10,6 +10,7 @@
         _identifier = [[NSUUID UUID] UUIDString];
         _period = 30.0;
         _digits = 6;
+        _algorithm = @"SHA1";
     }
     return self;
 }
@@ -22,8 +23,11 @@
         _name = [coder decodeObjectForKey:@"name"];
         _period = [coder decodeDoubleForKey:@"period"];
         _digits = [[coder decodeObjectForKey:@"digits"] unsignedIntegerValue];
+        _algorithm = [coder decodeObjectForKey:@"algorithm"];
+        
         if (_period == 0) _period = 30.0;
         if (_digits == 0) _digits = 6;
+        if (!_algorithm) _algorithm = @"SHA1";
         
         // Note: We intentionally do NOT decode the secret here.
         // It resides securely in the iOS Keychain.
@@ -37,6 +41,7 @@
     [coder encodeObject:_name forKey:@"name"];
     [coder encodeDouble:_period forKey:@"period"];
     [coder encodeObject:@(_digits) forKey:@"digits"];
+    [coder encodeObject:_algorithm forKey:@"algorithm"];
 }
 
 - (NSString *)currentTOTP {
@@ -53,8 +58,8 @@
         }
         
         if (secretToUse) {
-            self.cachedTOTP = [TOTPGenerator generateTOTPWithSecretString:secretToUse period:self.period digits:self.digits timestamp:now error:&err];
-            self.cachedNextTOTP = [TOTPGenerator generateTOTPWithSecretString:secretToUse period:self.period digits:self.digits timestamp:now + period error:nil];
+            self.cachedTOTP = [TOTPGenerator generateTOTPWithSecretString:secretToUse period:self.period digits:self.digits algorithm:self.algorithm timestamp:now error:&err];
+            self.cachedNextTOTP = [TOTPGenerator generateTOTPWithSecretString:secretToUse period:self.period digits:self.digits algorithm:self.algorithm timestamp:now + period error:nil];
             if (!self.cachedTOTP) {
                 self.cachedTOTP = @"Error";
                 self.cachedNextTOTP = @"";

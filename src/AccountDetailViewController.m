@@ -81,7 +81,7 @@
             cell.detailTextLabel.text = @"Secured in Keychain";
         } else if (indexPath.row == 1) {
             cell.textLabel.text = @"Algorithm";
-            cell.detailTextLabel.text = @"SHA1";
+            cell.detailTextLabel.text = self.account.algorithm ?: @"SHA1";
         } else if (indexPath.row == 2) {
             cell.textLabel.text = @"Digits";
             cell.detailTextLabel.text = [NSString stringWithFormat:@"%lu", (unsigned long)self.account.digits];

@@ -7,6 +7,7 @@
 @property (nonatomic, copy) NSString *transientSecret; // Not saved to disk, saved to Keychain
 @property (nonatomic, assign) NSTimeInterval period;
 @property (nonatomic, assign) NSUInteger digits;
+@property (nonatomic, copy) NSString *algorithm;
 
 // Caching to minimize keychain hits and CPU usage
 @property (nonatomic, copy) NSString *cachedTOTP;

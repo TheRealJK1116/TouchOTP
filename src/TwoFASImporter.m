@@ -70,6 +70,9 @@
             
             id period = otp[@"period"];
             if (period) account.period = [period doubleValue];
+            
+            id algo = otp[@"algorithm"];
+            if ([algo isKindOfClass:[NSString class]]) account.algorithm = [algo uppercaseString];
         } else {
             account.name = @"";
         }
