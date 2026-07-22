@@ -5,8 +5,10 @@
 #import "TwoFASImporter.h"
 #import "FileBrowserViewController.h"
 #import "NetworkTimeHelper.h"
+#import "MF_QRScanner.h"
+#import "OTPAuthURIParser.h"
 
-@interface RootViewController () <AddAccountDelegate, AccountDetailDelegate, UIActionSheetDelegate, UIAlertViewDelegate, FileBrowserDelegate, UISearchBarDelegate>
+@interface RootViewController () <AddAccountDelegate, AccountDetailDelegate, UIActionSheetDelegate, UIAlertViewDelegate, FileBrowserDelegate, UISearchBarDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate>
 @property (nonatomic, strong) NSTimer *timer;
 @property (nonatomic, strong) UILabel *titleViewLabel;
 @property (nonatomic, strong) UILabel *driftLabel;
@@ -167,7 +169,7 @@
 }
 
 - (void)addButtonTapped:(id)sender {
-    UIActionSheet *sheet = [[UIActionSheet alloc] initWithTitle:@"Add Account" delegate:self cancelButtonTitle:@"Cancel" destructiveButtonTitle:nil otherButtonTitles:@"Add Manually", @"Import from Clipboard", @"Import from File", nil];
+    UIActionSheet *sheet = [[UIActionSheet alloc] initWithTitle:@"Add Account" delegate:self cancelButtonTitle:@"Cancel" destructiveButtonTitle:nil otherButtonTitles:@"Add Manually", @"Import from Clipboard", @"Import from File", @"Import via Camera (QR)", nil];
     sheet.tag = 1;
     [sheet showInView:self.view];
 }
@@ -193,6 +195,16 @@
             browser.delegate = self;
             UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:browser];
             [self presentViewController:nav animated:YES completion:nil];
+        } else if (buttonIndex == 3) {
+            if ([UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypeCamera]) {
+                UIImagePickerController *picker = [[UIImagePickerController alloc] init];
+                picker.sourceType = UIImagePickerControllerSourceTypeCamera;
+                picker.delegate = self;
+                [self presentViewController:picker animated:YES completion:nil];
+            } else {
+                UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"No Camera" message:@"Camera is not available on this device." delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
+                [alert show];
+            }
         }
     }
 }
@@ -394,6 +406,41 @@
     detailVC.account = account;
     detailVC.delegate = self;
     [self.navigationController pushViewController:detailVC animated:YES];
+}
+
+#pragma mark - UIImagePickerControllerDelegate
+
+- (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info {
+    [picker dismissViewControllerAnimated:YES completion:nil];
+    
+    UIImage *image = info[UIImagePickerControllerOriginalImage];
+    if (image) {
+        NSString *qrString = [MF_QRScanner decodeQRImage:image];
+        if (qrString) {
+            OTPAccount *account = [OTPAuthURIParser accountFromURI:qrString];
+            if (account) {
+                if (![[OTPStore sharedStore] isDuplicate:account]) {
+                    [[OTPStore sharedStore] addAccount:account];
+                    [self refreshData];
+                    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Success" message:@"Account imported successfully." delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
+                    [alert show];
+                } else {
+                    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Duplicate" message:@"This account already exists." delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
+                    [alert show];
+                }
+            } else {
+                UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Invalid QR Code" message:@"The scanned QR code is not a valid TOTP format." delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
+                [alert show];
+            }
+        } else {
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"No QR Code" message:@"Could not detect a QR code in the image." delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
+            [alert show];
+        }
+    }
+}
+
+- (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
+    [picker dismissViewControllerAnimated:YES completion:nil];
 }
 
 #pragma mark - UISearchBarDelegate
