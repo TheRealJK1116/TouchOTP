@@ -1,5 +1,6 @@
 #import "MF_2FASDecryptor.h"
 #import <CommonCrypto/CommonKeyDerivation.h>
+#import <CommonCrypto/CommonCryptor.h>
 #import "MF_Base64Additions.h"
 #include "gcm.h"
 
