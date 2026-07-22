@@ -1,8 +1,10 @@
 #import "RootViewController.h"
 #import "OTPStore.h"
 #import "AddAccountViewController.h"
+#import "AccountDetailViewController.h"
+#import "TwoFASImporter.h"
 
-@interface RootViewController () <AddAccountDelegate>
+@interface RootViewController () <AddAccountDelegate, AccountDetailDelegate, UIActionSheetDelegate>
 @property (nonatomic, strong) NSTimer *timer;
 @property (nonatomic, strong) UILabel *titleViewLabel;
 @end
@@ -16,7 +18,7 @@
     self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.tableView.delegate = self;
     self.tableView.dataSource = self;
-    self.tableView.rowHeight = 60.0;
+    self.tableView.rowHeight = 65.0;
     [self.view addSubview:self.tableView];
 }
 
@@ -37,6 +39,12 @@
     UIBarButtonItem *addButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(addButtonTapped:)];
     self.navigationItem.rightBarButtonItem = addButton;
     self.navigationItem.leftBarButtonItem = self.editButtonItem;
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleImportFile:) name:@"TouchOTPImportFileNotification" object:nil];
+}
+
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -53,11 +61,10 @@
 
 - (void)tick {
     [self updateTitle];
-    // Find visible cells and update their codes if needed
     for (UITableViewCell *cell in [self.tableView visibleCells]) {
         NSIndexPath *indexPath = [self.tableView indexPathForCell:cell];
         OTPAccount *account = [[OTPStore sharedStore].accounts objectAtIndex:indexPath.row];
-        NSString *totp = [account currentTOTP];
+        NSString *totp = [account formattedTOTP];
         
         UILabel *codeLabel = (UILabel *)[cell.contentView viewWithTag:100];
         if (![codeLabel.text isEqualToString:totp]) {
@@ -78,14 +85,78 @@
 }
 
 - (void)addButtonTapped:(id)sender {
-    AddAccountViewController *addVC = [[AddAccountViewController alloc] init];
-    addVC.delegate = self;
-    UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:addVC];
-    [self presentViewController:nav animated:YES completion:nil];
+    UIActionSheet *sheet = [[UIActionSheet alloc] initWithTitle:@"Add Account" delegate:self cancelButtonTitle:@"Cancel" destructiveButtonTitle:nil otherButtonTitles:@"Add Manually", @"Import from Clipboard", nil];
+    sheet.tag = 1;
+    [sheet showInView:self.view];
+}
+
+- (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex {
+    if (actionSheet.tag == 1) {
+        if (buttonIndex == 0) {
+            AddAccountViewController *addVC = [[AddAccountViewController alloc] init];
+            addVC.delegate = self;
+            UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:addVC];
+            [self presentViewController:nav animated:YES completion:nil];
+        } else if (buttonIndex == 1) {
+            NSString *clip = [UIPasteboard generalPasteboard].string;
+            if (clip.length > 0) {
+                NSData *data = [clip dataUsingEncoding:NSUTF8StringEncoding];
+                [self processImportData:data];
+            } else {
+                UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Error" message:@"Clipboard is empty." delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
+                [alert show];
+            }
+        }
+    }
+}
+
+- (void)handleImportFile:(NSNotification *)note {
+    NSData *data = note.object;
+    if ([data isKindOfClass:[NSData class]]) {
+        [self processImportData:data];
+    }
+}
+
+- (void)processImportData:(NSData *)data {
+    TwoFASImporter *importer = [[TwoFASImporter alloc] init];
+    NSError *error = nil;
+    NSArray *accounts = [importer importAccountsFromData:data error:&error];
+    
+    if (error) {
+        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Import Failed" message:error.localizedDescription delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
+        [alert show];
+        return;
+    }
+    
+    if (accounts.count == 0) {
+        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Import Failed" message:@"No valid accounts found in backup." delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
+        [alert show];
+        return;
+    }
+    
+    int imported = 0;
+    int skipped = 0;
+    for (OTPAccount *acc in accounts) {
+        if (![[OTPStore sharedStore] isDuplicate:acc]) {
+            [[OTPStore sharedStore] addAccount:acc];
+            imported++;
+        } else {
+            skipped++;
+        }
+    }
+    
+    [self.tableView reloadData];
+    NSString *msg = [NSString stringWithFormat:@"Successfully imported %d accounts.\nSkipped %d duplicates.", imported, skipped];
+    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Import Complete" message:msg delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
+    [alert show];
 }
 
 - (void)didAddAccount:(OTPAccount *)account {
     [[OTPStore sharedStore] addAccount:account];
+    [self.tableView reloadData];
+}
+
+- (void)accountDetailDidUpdateOrDelete {
     [self.tableView reloadData];
 }
 
@@ -100,11 +171,12 @@
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
     if (cell == nil) {
         cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:CellIdentifier];
+        cell.accessoryType = UITableViewCellAccessoryDetailDisclosureButton;
         
-        UILabel *codeLabel = [[UILabel alloc] initWithFrame:CGRectMake(self.view.bounds.size.width - 130, 10, 110, 40)];
+        UILabel *codeLabel = [[UILabel alloc] initWithFrame:CGRectMake(self.view.bounds.size.width - 160, 12, 120, 40)];
         codeLabel.tag = 100;
-        codeLabel.font = [UIFont boldSystemFontOfSize:28];
-        codeLabel.textColor = [UIColor colorWithRed:0.1 green:0.4 blue:0.8 alpha:1.0];
+        codeLabel.font = [UIFont fontWithName:@"HelveticaNeue-Bold" size:26];
+        codeLabel.textColor = [UIColor colorWithRed:0.2 green:0.4 blue:0.8 alpha:1.0];
         codeLabel.textAlignment = NSTextAlignmentRight;
         codeLabel.backgroundColor = [UIColor clearColor];
         codeLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
@@ -114,14 +186,14 @@
     OTPAccount *account = [[OTPStore sharedStore].accounts objectAtIndex:indexPath.row];
     
     NSString *title = account.issuer.length > 0 ? account.issuer : @"Unknown";
-    if (account.name.length > 0) {
-        title = [NSString stringWithFormat:@"%@ (%@)", title, account.name];
-    }
     cell.textLabel.text = title;
-    cell.textLabel.font = [UIFont boldSystemFontOfSize:16];
+    cell.textLabel.font = [UIFont boldSystemFontOfSize:18];
+    
+    cell.detailTextLabel.text = account.name;
+    cell.detailTextLabel.textColor = [UIColor darkGrayColor];
     
     UILabel *codeLabel = (UILabel *)[cell.contentView viewWithTag:100];
-    NSString *totp = [account currentTOTP];
+    NSString *totp = [account formattedTOTP];
     codeLabel.text = totp ? totp : @"Error";
     
     return cell;
@@ -153,6 +225,14 @@
             [alert dismissWithClickedButtonIndex:0 animated:YES];
         });
     }
+}
+
+- (void)tableView:(UITableView *)tableView accessoryButtonTappedForRowWithIndexPath:(NSIndexPath *)indexPath {
+    OTPAccount *account = [[OTPStore sharedStore].accounts objectAtIndex:indexPath.row];
+    AccountDetailViewController *detailVC = [[AccountDetailViewController alloc] init];
+    detailVC.account = account;
+    detailVC.delegate = self;
+    [self.navigationController pushViewController:detailVC animated:YES];
 }
 
 @end

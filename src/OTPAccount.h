@@ -4,9 +4,14 @@
 @property (nonatomic, copy) NSString *identifier;
 @property (nonatomic, copy) NSString *issuer;
 @property (nonatomic, copy) NSString *name;
-@property (nonatomic, copy) NSString *secret; // base32 string
-@property (nonatomic, assign) NSTimeInterval period; // default 30
-@property (nonatomic, assign) NSUInteger digits; // default 6
+@property (nonatomic, copy) NSString *transientSecret; // Not saved to disk, saved to Keychain
+@property (nonatomic, assign) NSTimeInterval period;
+@property (nonatomic, assign) NSUInteger digits;
+
+// Caching to minimize keychain hits and CPU usage
+@property (nonatomic, copy) NSString *cachedTOTP;
+@property (nonatomic, assign) NSTimeInterval cachedTOTPExpiration;
 
 - (NSString *)currentTOTP;
+- (NSString *)formattedTOTP;
 @end

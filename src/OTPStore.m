@@ -1,4 +1,5 @@
 #import "OTPStore.h"
+#import "MF_Keychain.h"
 
 @interface OTPStore ()
 @property (nonatomic, strong) NSMutableArray *internalAccounts;
@@ -53,13 +54,30 @@ static OTPStore *shared = nil;
 }
 
 - (void)addAccount:(OTPAccount *)account {
+    if (account.transientSecret) {
+        [MF_Keychain saveSecret:account.transientSecret forIdentifier:account.identifier];
+        account.transientSecret = nil; // Wipe from class memory once secured
+    }
     [self.internalAccounts addObject:account];
     [self save];
 }
 
 - (void)removeAccount:(OTPAccount *)account {
+    [MF_Keychain deleteSecretForIdentifier:account.identifier];
     [self.internalAccounts removeObject:account];
     [self save];
+}
+
+- (BOOL)isDuplicate:(OTPAccount *)newAccount {
+    for (OTPAccount *acc in self.internalAccounts) {
+        NSString *existingSecret = [MF_Keychain loadSecretForIdentifier:acc.identifier];
+        if ([existingSecret isEqualToString:newAccount.transientSecret] &&
+            [acc.issuer isEqualToString:newAccount.issuer] &&
+            [acc.name isEqualToString:newAccount.name]) {
+            return YES;
+        }
+    }
+    return NO;
 }
 
 @end

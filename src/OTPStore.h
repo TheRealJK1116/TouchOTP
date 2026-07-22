@@ -6,5 +6,6 @@
 @property (nonatomic, strong, readonly) NSArray *accounts;
 - (void)addAccount:(OTPAccount *)account;
 - (void)removeAccount:(OTPAccount *)account;
+- (BOOL)isDuplicate:(OTPAccount *)newAccount;
 - (void)save;
 @end

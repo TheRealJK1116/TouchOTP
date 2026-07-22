@@ -16,4 +16,15 @@
     return YES;
 }
 
+- (BOOL)application:(UIApplication *)application openURL:(NSURL *)url sourceApplication:(NSString *)sourceApplication annotation:(id)annotation {
+    if (url.isFileURL) {
+        NSData *data = [NSData dataWithContentsOfURL:url];
+        if (data) {
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"TouchOTPImportFileNotification" object:data];
+            return YES;
+        }
+    }
+    return NO;
+}
+
 @end

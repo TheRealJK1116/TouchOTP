@@ -40,5 +40,23 @@
 	<string>English</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>2FAS Backup File</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.data</string>
+				<string>public.json</string>
+				<string>public.plain-text</string>
+				<string>public.content</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
