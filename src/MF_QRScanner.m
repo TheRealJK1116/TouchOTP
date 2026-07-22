@@ -41,9 +41,9 @@
     CIImage *ciImage = [[CIImage alloc] initWithCGImage:imageToDecode];
     if (ciImage) {
         CIFilter *filter = [CIFilter filterWithName:@"CIColorControls"];
-        [filter setValue:ciImage forKey:kCIInputImageKey];
-        [filter setValue:@(2.5) forKey:kCIInputContrastKey]; // Maximize black/white edge separation
-        [filter setValue:@(0.0) forKey:kCIInputSaturationKey]; // Strip color noise
+        [filter setValue:ciImage forKey:@"inputImage"];
+        [filter setValue:@(2.5) forKey:@"inputContrast"]; // Maximize black/white edge separation
+        [filter setValue:@(0.0) forKey:@"inputSaturation"]; // Strip color noise
         
         CIContext *context = [CIContext contextWithOptions:nil];
         CGImageRef enhancedCG = [context createCGImage:filter.outputImage fromRect:filter.outputImage.extent];
