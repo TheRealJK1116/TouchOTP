@@ -179,9 +179,10 @@ int ZX_AZTEC_SHIFT_TABLE[ZX_AZTEC_SHIFT_TABLE_SIZE][ZX_AZTEC_SHIFT_TABLE_SIZE];
     }
   }
   // We are left with a set of states.  Find the shortest one.
-  ZXAztecState *minState = [[states sortedArrayUsingComparator:^NSComparisonResult(ZXAztecState *a, ZXAztecState *b) {
+  NSArray *sortedStates = [states sortedArrayUsingComparator:^NSComparisonResult(ZXAztecState *a, ZXAztecState *b) {
     return a.bitCount - b.bitCount;
-  }] firstObject];
+  }];
+  ZXAztecState *minState = sortedStates.count > 0 ? [sortedStates objectAtIndex:0] : nil;
   // Convert it to a bit array, and return.
   return [minState toBitArray:self.text];
 }
