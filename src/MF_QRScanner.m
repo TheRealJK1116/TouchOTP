@@ -1,89 +1,29 @@
 #import "MF_QRScanner.h"
-#import "quirc.h"
-#include <string.h>
+#import "ZXingObjC.h"
 
 @implementation MF_QRScanner
 
-+ (NSString *)decodeQRImage:(UIImage *)rawImage {
-    if (!rawImage) return nil;
++ (NSString *)decodeQRImage:(UIImage *)image {
+    if (!image) return nil;
     
-    // Normalize image orientation and crop by drawing it into a new context
-    CGSize size = rawImage.size;
-    UIGraphicsBeginImageContextWithOptions(size, NO, 1.0);
-    [rawImage drawInRect:CGRectMake(0, 0, size.width, size.height)];
-    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
+    CGImageRef imageToDecode = image.CGImage;
+    ZXLuminanceSource *source = [[ZXCGImageLuminanceSource alloc] initWithCGImage:imageToDecode];
+    ZXBinaryBitmap *bitmap = [ZXBinaryBitmap binaryBitmapWithBinarizer:[ZXHybridBinarizer binarizerWithSource:source]];
     
-    CGImageRef cgImage = image.CGImage;
-    if (!cgImage) return nil;
+    NSError *error = nil;
+    ZXDecodeHints *hints = [ZXDecodeHints hints];
+    // We only care about QR codes for OTP
+    [hints addPossibleFormat:kBarcodeFormatQRCode];
+    hints.tryHarder = YES;
     
-    size_t width = CGImageGetWidth(cgImage);
-    size_t height = CGImageGetHeight(cgImage);
+    ZXMultiFormatReader *reader = [ZXMultiFormatReader reader];
+    ZXResult *result = [reader decode:bitmap hints:hints error:&error];
     
-    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceGray();
-    uint8_t *pixelBuffer = (uint8_t *)malloc(width * height);
-    CGContextRef context = CGBitmapContextCreate(pixelBuffer, width, height, 8, width, colorSpace, kCGImageAlphaNone);
-    
-    if (!context) {
-        free(pixelBuffer);
-        CGColorSpaceRelease(colorSpace);
-        return nil;
+    if (result) {
+        return result.text;
     }
     
-    CGContextDrawImage(context, CGRectMake(0, 0, width, height), cgImage);
-    CGContextRelease(context);
-    CGColorSpaceRelease(colorSpace);
-    
-    struct quirc *q = quirc_new();
-    if (!q) {
-        free(pixelBuffer);
-        return nil;
-    }
-    
-    if (quirc_resize(q, (int)width, (int)height) < 0) {
-        quirc_destroy(q);
-        free(pixelBuffer);
-        return nil;
-    }
-    
-    int q_width, q_height;
-    uint8_t *q_image = quirc_begin(q, &q_width, &q_height);
-    memcpy(q_image, pixelBuffer, width * height);
-    quirc_end(q);
-    
-    free(pixelBuffer);
-    
-    int count = quirc_count(q);
-    if (count == 0) {
-        quirc_destroy(q);
-        return nil;
-    }
-    
-    NSString *result = nil;
-    for (int i = 0; i < count; i++) {
-        struct quirc_code code;
-        struct quirc_data data;
-        quirc_extract(q, i, &code);
-        
-        quirc_decode_error_t err = quirc_decode(&code, &data);
-        if (!err) {
-            result = [[NSString alloc] initWithBytes:data.payload length:data.payload_len encoding:NSUTF8StringEncoding];
-            break;
-        }
-        
-        // Sometimes cameras invert the colors natively or mirror the image,
-        // quirc has a flip function we can try if normal decode fails.
-        quirc_flip(&code);
-        err = quirc_decode(&code, &data);
-        if (!err) {
-            result = [[NSString alloc] initWithBytes:data.payload length:data.payload_len encoding:NSUTF8StringEncoding];
-            break;
-        }
-    }
-    
-    quirc_destroy(q);
-    
-    return result;
+    return nil;
 }
 
 @end
