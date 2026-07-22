@@ -7,6 +7,7 @@
 #import "NetworkTimeHelper.h"
 #import "MF_QRScanner.h"
 #import "OTPAuthURIParser.h"
+#import "MFFaviconCache.h"
 
 @interface RootViewController () <AddAccountDelegate, AccountDetailDelegate, UIActionSheetDelegate, UIAlertViewDelegate, FileBrowserDelegate, UISearchBarDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate>
 @property (nonatomic, strong) NSTimer *timer;
@@ -309,21 +310,28 @@
         cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
         cell.accessoryType = UITableViewCellAccessoryDetailDisclosureButton;
         
-        UILabel *issuerLabel = [[UILabel alloc] initWithFrame:CGRectMake(15, 8, 200, 16)];
+        UIImageView *iconView = [[UIImageView alloc] initWithFrame:CGRectMake(15, 22.5, 40, 40)];
+        iconView.tag = 104;
+        iconView.contentMode = UIViewContentModeScaleAspectFit;
+        iconView.layer.cornerRadius = 8.0;
+        iconView.layer.masksToBounds = YES;
+        [cell.contentView addSubview:iconView];
+        
+        UILabel *issuerLabel = [[UILabel alloc] initWithFrame:CGRectMake(65, 8, 200, 16)];
         issuerLabel.tag = 101;
         issuerLabel.font = [UIFont boldSystemFontOfSize:13];
         issuerLabel.textColor = [UIColor darkGrayColor];
         issuerLabel.backgroundColor = [UIColor clearColor];
         [cell.contentView addSubview:issuerLabel];
         
-        UILabel *nameLabel = [[UILabel alloc] initWithFrame:CGRectMake(15, 26, 200, 16)];
+        UILabel *nameLabel = [[UILabel alloc] initWithFrame:CGRectMake(65, 26, 200, 16)];
         nameLabel.tag = 102;
         nameLabel.font = [UIFont systemFontOfSize:12];
         nameLabel.textColor = [UIColor grayColor];
         nameLabel.backgroundColor = [UIColor clearColor];
         [cell.contentView addSubview:nameLabel];
         
-        UILabel *codeLabel = [[UILabel alloc] initWithFrame:CGRectMake(15, 45, 145, 32)];
+        UILabel *codeLabel = [[UILabel alloc] initWithFrame:CGRectMake(65, 45, 145, 32)];
         codeLabel.tag = 100;
         codeLabel.font = [UIFont fontWithName:@"HelveticaNeue-Bold" size:28];
         codeLabel.textColor = [UIColor colorWithRed:0.2 green:0.4 blue:0.8 alpha:1.0];
@@ -342,6 +350,7 @@
     
     OTPAccount *account = [self.displayedAccounts objectAtIndex:indexPath.row];
     
+    UIImageView *iconView = (UIImageView *)[cell.contentView viewWithTag:104];
     UILabel *issuerLabel = (UILabel *)[cell.contentView viewWithTag:101];
     UILabel *nameLabel = (UILabel *)[cell.contentView viewWithTag:102];
     UILabel *codeLabel = (UILabel *)[cell.contentView viewWithTag:100];
@@ -349,6 +358,34 @@
     
     issuerLabel.text = account.issuer.length > 0 ? account.issuer : @"Unknown Issuer";
     nameLabel.text = account.name.length > 0 ? account.name : @"";
+    
+    NSString *domain = [account effectiveIconDomain];
+    iconView.image = nil;
+    iconView.backgroundColor = [UIColor colorWithWhite:0.9 alpha:1.0];
+    if (domain) {
+        UIImage *img = [[MFFaviconCache sharedCache] cachedIconForDomain:domain];
+        if (img) {
+            iconView.image = img;
+            iconView.backgroundColor = [UIColor clearColor];
+        } else {
+            [[MFFaviconCache sharedCache] fetchIconForDomain:domain completion:^(UIImage *image) {
+                if (image) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        NSUInteger idx = [self.displayedAccounts indexOfObject:account];
+                        if (idx != NSNotFound) {
+                            NSIndexPath *ip = [NSIndexPath indexPathForRow:idx inSection:0];
+                            UITableViewCell *c = [self.tableView cellForRowAtIndexPath:ip];
+                            if (c) {
+                                UIImageView *iv = (UIImageView *)[c.contentView viewWithTag:104];
+                                iv.image = image;
+                                iv.backgroundColor = [UIColor clearColor];
+                            }
+                        }
+                    });
+                }
+            }];
+        }
+    }
     
     NSString *totp = [account formattedTOTP];
     if ([totp isEqualToString:@"Error"]) {

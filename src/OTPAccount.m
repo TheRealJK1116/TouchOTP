@@ -24,6 +24,7 @@
         _period = [coder decodeDoubleForKey:@"period"];
         _digits = [[coder decodeObjectForKey:@"digits"] unsignedIntegerValue];
         _algorithm = [coder decodeObjectForKey:@"algorithm"];
+        _iconDomain = [coder decodeObjectForKey:@"iconDomain"];
         
         if (_period == 0) _period = 30.0;
         if (_digits == 0) _digits = 6;
@@ -42,6 +43,31 @@
     [coder encodeDouble:_period forKey:@"period"];
     [coder encodeObject:@(_digits) forKey:@"digits"];
     [coder encodeObject:_algorithm forKey:@"algorithm"];
+    [coder encodeObject:_iconDomain forKey:@"iconDomain"];
+}
+
+- (NSString *)effectiveIconDomain {
+    if (self.iconDomain && self.iconDomain.length > 0) {
+        return self.iconDomain;
+    }
+    
+    if (self.issuer && self.issuer.length > 0) {
+        NSString *clean = [[self.issuer lowercaseString] stringByReplacingOccurrencesOfString:@" " withString:@""];
+        if ([clean rangeOfString:@"."].location == NSNotFound) {
+            return [NSString stringWithFormat:@"%@.com", clean];
+        }
+        return clean;
+    }
+    
+    if (self.name && [self.name rangeOfString:@"@"].location != NSNotFound) {
+        NSArray *parts = [self.name componentsSeparatedByString:@"@"];
+        if (parts.count == 2) {
+            NSString *domain = parts[1];
+            return [domain stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+        }
+    }
+    
+    return nil;
 }
 
 - (NSString *)currentTOTP {

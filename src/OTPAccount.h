@@ -9,6 +9,8 @@
 @property (nonatomic, assign) NSUInteger digits;
 @property (nonatomic, copy) NSString *algorithm;
 
+@property (nonatomic, copy) NSString *iconDomain;
+
 // Caching to minimize keychain hits and CPU usage
 @property (nonatomic, copy) NSString *cachedTOTP;
 @property (nonatomic, copy) NSString *cachedNextTOTP;
@@ -18,4 +20,5 @@
 - (NSString *)currentTOTP;
 - (NSString *)formattedTOTP;
 - (NSString *)formattedNextTOTP;
+- (NSString *)effectiveIconDomain;
 @end

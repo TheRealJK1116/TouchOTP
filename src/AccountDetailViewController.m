@@ -4,6 +4,7 @@
 @interface AccountDetailViewController () <UITextFieldDelegate>
 @property (nonatomic, strong) UITextField *issuerField;
 @property (nonatomic, strong) UITextField *nameField;
+@property (nonatomic, strong) UITextField *iconDomainField;
 @end
 
 @implementation AccountDetailViewController
@@ -28,11 +29,19 @@
     self.nameField.autocapitalizationType = UITextAutocapitalizationTypeNone;
     self.nameField.autocorrectionType = UITextAutocorrectionTypeNo;
     self.nameField.keyboardType = UIKeyboardTypeEmailAddress;
+    
+    self.iconDomainField = [[UITextField alloc] initWithFrame:CGRectMake(110, 10, 190, 24)];
+    self.iconDomainField.text = self.account.iconDomain;
+    self.iconDomainField.placeholder = @"e.g. github.com";
+    self.iconDomainField.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    self.iconDomainField.autocorrectionType = UITextAutocorrectionTypeNo;
+    self.iconDomainField.keyboardType = UIKeyboardTypeURL;
 }
 
 - (void)saveTapped {
     self.account.issuer = self.issuerField.text;
     self.account.name = self.nameField.text;
+    self.account.iconDomain = self.iconDomainField.text;
     [[OTPStore sharedStore] save];
     
     if (self.delegate) [self.delegate accountDetailDidUpdateOrDelete];
@@ -44,7 +53,7 @@
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    if (section == 0) return 2;
+    if (section == 0) return 3;
     if (section == 1) return 4;
     return 1;
 }
@@ -71,9 +80,12 @@
         if (indexPath.row == 0) {
             label.text = @"Issuer";
             [cell.contentView addSubview:self.issuerField];
-        } else {
+        } else if (indexPath.row == 1) {
             label.text = @"Account";
             [cell.contentView addSubview:self.nameField];
+        } else {
+            label.text = @"Domain";
+            [cell.contentView addSubview:self.iconDomainField];
         }
     } else if (indexPath.section == 1) {
         if (indexPath.row == 0) {
