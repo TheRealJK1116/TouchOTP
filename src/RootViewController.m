@@ -8,6 +8,7 @@
 #import "MF_QRScanner.h"
 #import "OTPAuthURIParser.h"
 #import "MFFaviconCache.h"
+#import <QuartzCore/QuartzCore.h>
 
 @interface RootViewController () <AddAccountDelegate, AccountDetailDelegate, UIActionSheetDelegate, UIAlertViewDelegate, FileBrowserDelegate, UISearchBarDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate>
 @property (nonatomic, strong) NSTimer *timer;
