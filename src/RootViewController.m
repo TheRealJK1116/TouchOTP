@@ -71,7 +71,59 @@
     
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleImportFile:) name:@"TouchOTPImportFileNotification" object:nil];
     
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
+    
     [[NetworkTimeHelper sharedHelper] calculateDrift];
+}
+
+- (void)keyboardWillShow:(NSNotification *)note {
+    NSDictionary *info = [note userInfo];
+    CGRect kbFrameEnd = [[info objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
+    NSTimeInterval duration = [[info objectForKey:UIKeyboardAnimationDurationUserInfoKey] doubleValue];
+    UIViewAnimationCurve curve = (UIViewAnimationCurve)[[info objectForKey:UIKeyboardAnimationCurveUserInfoKey] integerValue];
+    
+    // Convert the keyboard frame from window coordinates into our view's coordinates
+    // (handles rotation / status bar / navigation bar offsets correctly on iOS 6).
+    CGRect kbFrameInView = [self.view convertRect:kbFrameEnd fromView:nil];
+    CGFloat overlap = CGRectGetMaxY(self.view.bounds) - kbFrameInView.origin.y;
+    if (overlap < 0) overlap = 0;
+    
+    CGRect viewBounds = self.view.bounds;
+    CGRect searchFrame = self.searchBar.frame;
+    CGRect tableFrame = self.tableView.frame;
+    
+    searchFrame.origin.y = viewBounds.size.height - overlap - searchFrame.size.height;
+    tableFrame.size.height = searchFrame.origin.y;
+    
+    [UIView beginAnimations:@"TouchOTPKeyboardShow" context:NULL];
+    [UIView setAnimationDuration:duration];
+    [UIView setAnimationCurve:curve];
+    [UIView setAnimationBeginsFromCurrentState:YES];
+    self.searchBar.frame = searchFrame;
+    self.tableView.frame = tableFrame;
+    [UIView commitAnimations];
+}
+
+- (void)keyboardWillHide:(NSNotification *)note {
+    NSDictionary *info = [note userInfo];
+    NSTimeInterval duration = [[info objectForKey:UIKeyboardAnimationDurationUserInfoKey] doubleValue];
+    UIViewAnimationCurve curve = (UIViewAnimationCurve)[[info objectForKey:UIKeyboardAnimationCurveUserInfoKey] integerValue];
+    
+    CGRect viewBounds = self.view.bounds;
+    CGRect searchFrame = self.searchBar.frame;
+    CGRect tableFrame = self.tableView.frame;
+    
+    searchFrame.origin.y = viewBounds.size.height - searchFrame.size.height;
+    tableFrame.size.height = viewBounds.size.height - searchFrame.size.height;
+    
+    [UIView beginAnimations:@"TouchOTPKeyboardHide" context:NULL];
+    [UIView setAnimationDuration:duration];
+    [UIView setAnimationCurve:curve];
+    [UIView setAnimationBeginsFromCurrentState:YES];
+    self.searchBar.frame = searchFrame;
+    self.tableView.frame = tableFrame;
+    [UIView commitAnimations];
 }
 
 - (void)dealloc {
