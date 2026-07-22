@@ -50,37 +50,33 @@ static NSArray *FOR_BITS = nil;
 
 + (ZXQRCodeErrorCorrectionLevel *)errorCorrectionLevelL {
   static ZXQRCodeErrorCorrectionLevel *thisLevel = nil;
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
+  if (!thisLevel) {
     thisLevel = [[ZXQRCodeErrorCorrectionLevel alloc] initWithOrdinal:0 bits:0x01 name:@"L"];
-  });
+  }
   return thisLevel;
 }
 
 + (ZXQRCodeErrorCorrectionLevel *)errorCorrectionLevelM {
   static ZXQRCodeErrorCorrectionLevel *thisLevel = nil;
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
+  if (!thisLevel) {
     thisLevel = [[ZXQRCodeErrorCorrectionLevel alloc] initWithOrdinal:1 bits:0x00 name:@"M"];
-  });
+  }
   return thisLevel;
 }
 
 + (ZXQRCodeErrorCorrectionLevel *)errorCorrectionLevelQ {
   static ZXQRCodeErrorCorrectionLevel *thisLevel = nil;
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
+  if (!thisLevel) {
     thisLevel = [[ZXQRCodeErrorCorrectionLevel alloc] initWithOrdinal:2 bits:0x03 name:@"Q"];
-  });
+  }
   return thisLevel;
 }
 
 + (ZXQRCodeErrorCorrectionLevel *)errorCorrectionLevelH {
   static ZXQRCodeErrorCorrectionLevel *thisLevel = nil;
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
+  if (!thisLevel) {
     thisLevel = [[ZXQRCodeErrorCorrectionLevel alloc] initWithOrdinal:3 bits:0x02 name:@"H"];
-  });
+  }
   return thisLevel;
 }
 
