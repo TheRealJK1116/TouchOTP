@@ -57,8 +57,17 @@
         struct quirc_code code;
         struct quirc_data data;
         quirc_extract(q, i, &code);
-        quirc_decode_error_t err = quirc_decode(&code, &data);
         
+        quirc_decode_error_t err = quirc_decode(&code, &data);
+        if (!err) {
+            result = [[NSString alloc] initWithBytes:data.payload length:data.payload_len encoding:NSUTF8StringEncoding];
+            break;
+        }
+        
+        // Sometimes cameras invert the colors natively or mirror the image,
+        // quirc has a flip function we can try if normal decode fails.
+        quirc_flip(&code);
+        err = quirc_decode(&code, &data);
         if (!err) {
             result = [[NSString alloc] initWithBytes:data.payload length:data.payload_len encoding:NSUTF8StringEncoding];
             break;
