@@ -6,7 +6,7 @@ include $(THEOS)/makefiles/common.mk
 
 APPLICATION_NAME = TouchOTP
 TouchOTP_FILES = main.m $(wildcard src/*.m)
-TouchOTP_FRAMEWORKS = UIKit CoreGraphics
+TouchOTP_FRAMEWORKS = UIKit CoreGraphics Foundation Security
 TouchOTP_CFLAGS = -fobjc-arc -I./src
 
 include $(THEOS_MAKE_PATH)/application.mk
