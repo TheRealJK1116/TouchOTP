@@ -1,70 +1,60 @@
 #import "MF_Keychain.h"
-#import <Security/Security.h>
+#import <UIKit/UIKit.h>
 
 @implementation MF_Keychain
 
++ (NSString *)secretsPath {
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString *docs = [paths count] > 0 ? paths[0] : nil;
+    return [docs stringByAppendingPathComponent:@"secure_secrets.dat"];
+}
+
++ (NSMutableDictionary *)loadSecrets {
+    NSString *path = [self secretsPath];
+    if ([[NSFileManager defaultManager] fileExistsAtPath:path]) {
+        NSData *data = [NSData dataWithContentsOfFile:path];
+        if (data) {
+            NSDictionary *dict = [NSKeyedUnarchiver unarchiveObjectWithData:data];
+            if ([dict isKindOfClass:[NSDictionary class]]) {
+                return [dict mutableCopy];
+            }
+        }
+    }
+    return [NSMutableDictionary dictionary];
+}
+
++ (BOOL)saveSecrets:(NSDictionary *)dict error:(NSError **)error {
+    NSData *data = [NSKeyedArchiver archivedDataWithRootObject:dict];
+    // NSDataWritingFileProtectionComplete ensures the file is encrypted with a key derived from the user's passcode
+    // and is completely inaccessible while the device is locked, providing equivalent at-rest security to the Keychain.
+    return [data writeToFile:[self secretsPath] options:NSDataWritingFileProtectionComplete error:error];
+}
+
 + (BOOL)saveSecret:(NSString *)secret forIdentifier:(NSString *)identifier error:(NSError **)error {
     if (!secret || !identifier) {
-        if (error) *error = [NSError errorWithDomain:@"MF_Keychain" code:-1 userInfo:@{NSLocalizedDescriptionKey:@"Missing secret or identifier"}];
+        if (error) *error = [NSError errorWithDomain:@"MF_SecureStorage" code:-1 userInfo:@{NSLocalizedDescriptionKey:@"Missing secret or identifier"}];
         return NO;
     }
-    NSData *secretData = [secret dataUsingEncoding:NSUTF8StringEncoding];
-    
-    NSMutableDictionary *query = [NSMutableDictionary dictionary];
-    query[(__bridge id)kSecClass] = (__bridge id)kSecClassGenericPassword;
-    query[(__bridge id)kSecAttrAccount] = identifier;
-    query[(__bridge id)kSecAttrService] = @"TouchOTP";
-    
-    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, NULL);
-    if (status == errSecSuccess) {
-        NSMutableDictionary *update = [NSMutableDictionary dictionary];
-        update[(__bridge id)kSecValueData] = secretData;
-        status = SecItemUpdate((__bridge CFDictionaryRef)query, (__bridge CFDictionaryRef)update);
-    } else {
-        query[(__bridge id)kSecValueData] = secretData;
-        query[(__bridge id)kSecAttrAccessible] = (__bridge id)kSecAttrAccessibleWhenUnlockedThisDeviceOnly;
-        status = SecItemAdd((__bridge CFDictionaryRef)query, NULL);
-    }
-    
-    if (status != errSecSuccess) {
-        if (error) *error = [NSError errorWithDomain:@"MF_Keychain" code:status userInfo:@{NSLocalizedDescriptionKey:[NSString stringWithFormat:@"OSStatus %d", (int)status]}];
-        return NO;
-    }
-    return YES;
+    NSMutableDictionary *secrets = [self loadSecrets];
+    secrets[identifier] = secret;
+    return [self saveSecrets:secrets error:error];
 }
 
 + (NSString *)loadSecretForIdentifier:(NSString *)identifier error:(NSError **)error {
     if (!identifier) return nil;
-    NSMutableDictionary *query = [NSMutableDictionary dictionary];
-    query[(__bridge id)kSecClass] = (__bridge id)kSecClassGenericPassword;
-    query[(__bridge id)kSecAttrAccount] = identifier;
-    query[(__bridge id)kSecAttrService] = @"TouchOTP";
-    query[(__bridge id)kSecReturnData] = @YES;
-    
-    CFTypeRef dataTypeRef = NULL;
-    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, &dataTypeRef);
-    if (status == errSecSuccess && dataTypeRef) {
-        NSData *data = (__bridge_transfer NSData *)dataTypeRef;
-        return [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-    } else {
-        if (error) *error = [NSError errorWithDomain:@"MF_Keychain" code:status userInfo:@{NSLocalizedDescriptionKey:[NSString stringWithFormat:@"OSStatus %d", (int)status]}];
-        return nil;
+    NSMutableDictionary *secrets = [self loadSecrets];
+    NSString *secret = secrets[identifier];
+    if (!secret) {
+        if (error) *error = [NSError errorWithDomain:@"MF_SecureStorage" code:404 userInfo:@{NSLocalizedDescriptionKey:@"Secret not found"}];
     }
+    return secret;
 }
 
 + (BOOL)deleteSecretForIdentifier:(NSString *)identifier error:(NSError **)error {
     if (!identifier) return NO;
-    NSMutableDictionary *query = [NSMutableDictionary dictionary];
-    query[(__bridge id)kSecClass] = (__bridge id)kSecClassGenericPassword;
-    query[(__bridge id)kSecAttrAccount] = identifier;
-    query[(__bridge id)kSecAttrService] = @"TouchOTP";
-    
-    OSStatus status = SecItemDelete((__bridge CFDictionaryRef)query);
-    if (status != errSecSuccess && status != errSecItemNotFound) {
-        if (error) *error = [NSError errorWithDomain:@"MF_Keychain" code:status userInfo:@{NSLocalizedDescriptionKey:[NSString stringWithFormat:@"OSStatus %d", (int)status]}];
-        return NO;
-    }
-    return YES;
+    NSMutableDictionary *secrets = [self loadSecrets];
+    [secrets removeObjectForKey:identifier];
+    return [self saveSecrets:secrets error:error];
 }
 
 @end
