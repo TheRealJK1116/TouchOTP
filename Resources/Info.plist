@@ -36,6 +36,10 @@
 	<string>TouchOTP</string>
 	<key>CFBundleDisplayName</key>
 	<string>TouchOTP</string>
+	<key>CFBundleIconFiles</key>
+	<array>
+		<string>icon.png</string>
+	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleShortVersionString</key>
