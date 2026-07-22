@@ -69,8 +69,15 @@
         NSString *totp = [account formattedTOTP];
         
         UILabel *codeLabel = (UILabel *)[cell.contentView viewWithTag:100];
-        if (![codeLabel.text isEqualToString:totp]) {
-            codeLabel.text = totp ? totp : @"Error";
+        
+        if ([totp isEqualToString:@"Error"]) {
+            codeLabel.text = account.lastError ?: @"Error";
+            codeLabel.font = [UIFont systemFontOfSize:12];
+            codeLabel.textColor = [UIColor redColor];
+        } else {
+            codeLabel.text = totp;
+            codeLabel.font = [UIFont fontWithName:@"HelveticaNeue-Bold" size:26];
+            codeLabel.textColor = [UIColor colorWithRed:0.2 green:0.4 blue:0.8 alpha:1.0];
         }
     }
 }
@@ -237,7 +244,16 @@
     
     UILabel *codeLabel = (UILabel *)[cell.contentView viewWithTag:100];
     NSString *totp = [account formattedTOTP];
-    codeLabel.text = totp ? totp : @"Error";
+    
+    if ([totp isEqualToString:@"Error"]) {
+        codeLabel.text = account.lastError ?: @"Error";
+        codeLabel.font = [UIFont systemFontOfSize:12];
+        codeLabel.textColor = [UIColor redColor];
+    } else {
+        codeLabel.text = totp;
+        codeLabel.font = [UIFont fontWithName:@"HelveticaNeue-Bold" size:26];
+        codeLabel.textColor = [UIColor colorWithRed:0.2 green:0.4 blue:0.8 alpha:1.0];
+    }
     
     return cell;
 }

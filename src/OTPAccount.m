@@ -47,15 +47,23 @@
     
     if (!self.cachedTOTP || now >= self.cachedTOTPExpiration) {
         NSString *secretToUse = self.transientSecret;
+        NSError *err = nil;
         if (!secretToUse) {
-            secretToUse = [MF_Keychain loadSecretForIdentifier:self.identifier];
+            secretToUse = [MF_Keychain loadSecretForIdentifier:self.identifier error:&err];
         }
         
         if (secretToUse) {
-            self.cachedTOTP = [TOTPGenerator generateTOTPWithSecretString:secretToUse period:self.period digits:self.digits timestamp:now];
+            self.cachedTOTP = [TOTPGenerator generateTOTPWithSecretString:secretToUse period:self.period digits:self.digits timestamp:now error:&err];
+            if (!self.cachedTOTP) {
+                self.cachedTOTP = @"Error";
+                self.lastError = err ? err.localizedDescription : @"Gen Fail";
+            } else {
+                self.lastError = nil;
+            }
             self.cachedTOTPExpiration = expiration;
         } else {
             self.cachedTOTP = @"Error";
+            self.lastError = err ? [NSString stringWithFormat:@"KC %d", (int)err.code] : @"No Secret";
             self.cachedTOTPExpiration = expiration;
         }
     }
@@ -64,6 +72,8 @@
 
 - (NSString *)formattedTOTP {
     NSString *raw = [self currentTOTP];
+    if ([raw isEqualToString:@"Error"]) return raw;
+    
     if (raw.length == 6) {
         return [NSString stringWithFormat:@"%@ %@", [raw substringToIndex:3], [raw substringFromIndex:3]];
     } else if (raw.length == 8) {

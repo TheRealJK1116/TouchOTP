@@ -4,9 +4,12 @@
 
 @implementation TOTPGenerator
 
-+ (NSString *)generateTOTPWithSecretString:(NSString *)secretString period:(NSTimeInterval)period digits:(NSUInteger)digits timestamp:(NSTimeInterval)timestamp {
++ (NSString *)generateTOTPWithSecretString:(NSString *)secretString period:(NSTimeInterval)period digits:(NSUInteger)digits timestamp:(NSTimeInterval)timestamp error:(NSError **)error {
     NSData *secretData = [NSData dataWithBase32String:secretString];
-    if (!secretData || secretData.length == 0) return nil;
+    if (!secretData || secretData.length == 0) {
+        if (error) *error = [NSError errorWithDomain:@"TOTP" code:1 userInfo:@{NSLocalizedDescriptionKey:@"Base32 Decode Failed"}];
+        return nil;
+    }
     
     uint64_t counter = (uint64_t)(timestamp / period);
     counter = NSSwapHostLongLongToBig(counter);

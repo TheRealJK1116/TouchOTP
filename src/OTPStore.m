@@ -1,5 +1,6 @@
 #import "OTPStore.h"
 #import "MF_Keychain.h"
+#import <UIKit/UIKit.h>
 
 @interface OTPStore ()
 @property (nonatomic, strong) NSMutableArray *internalAccounts;
@@ -55,22 +56,37 @@ static OTPStore *shared = nil;
 
 - (void)addAccount:(OTPAccount *)account {
     if (account.transientSecret) {
-        [MF_Keychain saveSecret:account.transientSecret forIdentifier:account.identifier];
-        account.transientSecret = nil; // Wipe from class memory once secured
+        NSError *err = nil;
+        if (![MF_Keychain saveSecret:account.transientSecret forIdentifier:account.identifier error:&err]) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                NSString *msg = [NSString stringWithFormat:@"Failed to save secret to Keychain:\n%@", err.localizedDescription];
+                UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Security Error" message:msg delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
+                [alert show];
+            });
+            // We intentionally do NOT wipe account.transientSecret here.
+            // This ensures codes will still generate during this session,
+            // even if the user lacks entitlements and it fails to persist.
+        } else {
+            account.transientSecret = nil; // Wipe from class memory once secured
+        }
     }
     [self.internalAccounts addObject:account];
     [self save];
 }
 
 - (void)removeAccount:(OTPAccount *)account {
-    [MF_Keychain deleteSecretForIdentifier:account.identifier];
+    NSError *err = nil;
+    [MF_Keychain deleteSecretForIdentifier:account.identifier error:&err];
     [self.internalAccounts removeObject:account];
     [self save];
 }
 
 - (BOOL)isDuplicate:(OTPAccount *)newAccount {
     for (OTPAccount *acc in self.internalAccounts) {
-        NSString *existingSecret = [MF_Keychain loadSecretForIdentifier:acc.identifier];
+        NSString *existingSecret = acc.transientSecret;
+        if (!existingSecret) {
+            existingSecret = [MF_Keychain loadSecretForIdentifier:acc.identifier error:nil];
+        }
         if ([existingSecret isEqualToString:newAccount.transientSecret] &&
             [acc.issuer isEqualToString:newAccount.issuer] &&
             [acc.name isEqualToString:newAccount.name]) {
