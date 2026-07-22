@@ -25,7 +25,7 @@
 
 - (NSString *)storePath {
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-    NSString *docs = [paths firstObject];
+    NSString *docs = [paths count] > 0 ? [paths objectAtIndex:0] : nil;
     return [docs stringByAppendingPathComponent:@"accounts.dat"];
 }
 
