@@ -44,6 +44,3 @@ TouchOTP is an OTP (One-Time Password) application built specifically for iOS 6,
    ```bash
    make install
    ```
-
-## Development Note
-Do not use Xcode projects as the primary build system, Swift, SwiftUI, or modern iOS frameworks. This application strictly uses Objective-C and the UIKit/CoreGraphics frameworks available in iOS 6.
